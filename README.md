@@ -1,0 +1,1 @@
+# rugvin-photo-gps-locations
