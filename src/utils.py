@@ -19,7 +19,7 @@ def count_files_and_list_all_contents(folder_path):
             relative_path = 'root'
         # Count files and list them under the current directory's key
         result[relative_path] = {'images_count': len(image_files), 'images': {file_name: None for file_name in image_files},
-                                 'other_files_count': len(set(files)-set(image_files)), 'files': {file_name: None for file_name in list(set(files)-set(image_files))}}
+                                 'other_files_count': len(set(files)-set(image_files)), 'files': list(set(files)-set(image_files))}
     return result
 
 
@@ -104,7 +104,7 @@ def create_image_metadata_report(folder_path):
                 results[subdirectory]['images'] = {image_name: {
                     'gps_info': gps_info, 'date': date} for image_name in subdirectory_dict['images'].keys()}
 
-    # flatten and create df
+    # flatten the images key into columns
     flattened_data = []
     for subfolder, details in results.items():
         for image_name, image_info in details['images'].items():
@@ -122,11 +122,21 @@ def create_image_metadata_report(folder_path):
         df['subfolder'] + '/' + df['image_name']
     df['folder_date'] = df['subfolder'].str.extract(r'(\d{4}-\d{2}-\d{2})')
     # substitute local path with NAS path
-    df = df.replace(
-        '/Users/janinekhuc/PycharmProjects/rugvin-photo-gps-locations/data', 'volume1/photo', regex=True)
+    df = df.replace(folder_path, 'volume1/photo', regex=True)
+    # Initialize the accumulator column with empty strings
+    df['viscode'] = ''
+
+    # Regex pattern to match
+    pattern = r'(L\d{3}R\d{3})'
+    df['viscode_subfolder'] = df['subfolder'].str.extract(pattern)
+    df['viscode_image_name'] = df['image_name'].str.extract(pattern)
+    df['viscode_other_files'] = df['other_files_in_subfolder'].str.extract(
+        pattern)
+    df['viscode'] = df['viscxode_subfolder'].combine_first(
+        df['viscode_image_name']).combine_first(df['viscode_other_files'])
     df.to_csv('../data/image_metadata_report.csv', sep=';')
 
 
 if __name__ == "__main__":
-    folder_path = '/Users/janinekhuc/PycharmProjects/rugvin-photo-gps-locations/data/'
+    folder_path = '/Users/janinekhuc/PycharmProjects/rugvin-photo-gps-locations/data'
     create_image_metadata_report(folder_path)
